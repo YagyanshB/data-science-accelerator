@@ -1,0 +1,48 @@
+# Housing price prediction – pipeline configuration
+# All paths are relative to the project root.
+
+data:
+  raw_path: "Lead Data Scientist Pre Work 1.xlsx"
+  sheet_name: 0
+
+preprocessing:
+  price_lower_quantile: 0.005   # Transactions below this quantile are excluded from training
+  current_year: 2026            # Reference year for property_age computation
+
+splits:
+  # Out-of-time (OOT) split boundaries using sale_year derived from date_of_transfer.
+  # Train on years <= train_cutoff, validate on train_cutoff < year <= val_cutoff,
+  # test on years > val_cutoff.
+  train_cutoff: 2023
+  val_cutoff: 2024
+
+target:
+  raw_column: "sale_price"
+  log_column: "log_sale_price"
+
+models:
+  lgbm:
+    n_estimators: 1000
+    learning_rate: 0.05
+    num_leaves: 63
+    min_child_samples: 20
+    subsample: 0.8
+    colsample_bytree: 0.8
+    early_stopping_rounds: 50
+    random_state: 42
+
+  xgb:
+    n_estimators: 1000
+    learning_rate: 0.05
+    max_depth: 6
+    subsample: 0.8
+    colsample_bytree: 0.8
+    early_stopping_rounds: 50
+    random_state: 42
+
+  ridge:
+    alpha: 1.0
+
+logging:
+  level: "INFO"
+  format: "%(asctime)s | %(levelname)-8s | %(name)s | %(message)s"
