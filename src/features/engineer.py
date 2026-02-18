@@ -281,12 +281,15 @@ class FeatureEngineer(BaseEstimator, TransformerMixin):
     # ------------------------------------------------------------------
 
     def fit(self, df: pd.DataFrame, y: Optional[pd.Series] = None) -> "FeatureEngineer":
-        """Learn floor-level median and categorical vocabularies.
+        """Learn floor-level median, district wealth index, and categorical vocabularies.
 
         Args:
             df: Preprocessed training DataFrame (output of
                 :class:`HousingPreprocessor`).
-            y: Ignored; present for sklearn compatibility.
+            y: Training target (``log_sale_price``) aligned with ``df``.
+                When provided, a district-level median target encoding is
+                computed and stored as ``district_wealth_``.  Must be a
+                pandas Series or array with the same index/length as ``df``.
 
         Returns:
             Fitted transformer (self).
@@ -303,6 +306,28 @@ class FeatureEngineer(BaseEstimator, TransformerMixin):
         df_tmp["floor_level_clean"] = df_tmp["floor_level_clean"].fillna(
             self.floor_level_median_
         )
+
+        # District wealth index: median log_sale_price per district (train only).
+        # Uses positional alignment so index mismatches are not a risk.
+        if y is not None and "district" in df_tmp.columns:
+            _y = pd.Series(
+                np.asarray(y),
+                index=df_tmp.index,
+                name="target",
+            )
+            self.district_wealth_: dict = (
+                _y.groupby(df_tmp["district"]).median().to_dict()
+            )
+            self.district_wealth_global_median_: float = float(_y.median())
+            df_tmp = df_tmp.drop(columns=["district"])
+            logger.info(
+                "Learned district wealth index for %d districts.",
+                len(self.district_wealth_),
+            )
+        else:
+            self.district_wealth_ = {}
+            self.district_wealth_global_median_ = float("nan")
+
         self.cat_columns_: List[str] = self._get_cat_columns(df_tmp)
         self.cat_encoder_ = OrdinalEncoder(
             handle_unknown="use_encoded_value",
@@ -339,6 +364,16 @@ class FeatureEngineer(BaseEstimator, TransformerMixin):
         df["floor_level_clean"] = df["floor_level_clean"].fillna(
             self.floor_level_median_
         )
+
+        # District wealth index: replace district string with numeric median price.
+        # Unseen districts fall back to the global training median.
+        if self.district_wealth_ and "district" in df.columns:
+            df["district_wealth_index"] = (
+                df["district"]
+                .map(self.district_wealth_)
+                .fillna(self.district_wealth_global_median_)
+            )
+            df = df.drop(columns=["district"])
 
         # Encode remaining categoricals.
         if self.cat_columns_:

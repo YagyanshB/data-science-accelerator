@@ -193,7 +193,10 @@ def run_pipeline(
     target_col = cfg["target"]["log_column"]
 
     engineer = FeatureEngineer(current_year=pre_cfg.get("current_year", 2026))
-    engineer.fit(df_train_pre.drop(columns=[target_col]))
+    engineer.fit(
+        df_train_pre.drop(columns=[target_col]),
+        y=df_train_pre[target_col],
+    )
 
     def _split_xy(df: pd.DataFrame):
         y = df[target_col].values
