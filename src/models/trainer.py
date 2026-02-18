@@ -17,6 +17,7 @@ from typing import Any, Dict, Optional, Tuple
 import numpy as np
 import pandas as pd
 from sklearn.base import BaseEstimator, RegressorMixin
+from sklearn.impute import SimpleImputer
 from sklearn.linear_model import Ridge
 from sklearn.preprocessing import StandardScaler
 
@@ -295,8 +296,10 @@ class RidgeTrainer(BaseEstimator, RegressorMixin):
         Returns:
             Fitted trainer (self).
         """
+        self.imputer_ = SimpleImputer(strategy="median")
+        X_imputed = self.imputer_.fit_transform(X_train)
         self.scaler_ = StandardScaler()
-        X_scaled = self.scaler_.fit_transform(X_train)
+        X_scaled = self.scaler_.fit_transform(X_imputed)
         self.model_ = Ridge(alpha=self.alpha)
         self.model_.fit(X_scaled, y_train)
         logger.info("Ridge trained with alpha=%.4f.", self.alpha)
@@ -311,7 +314,8 @@ class RidgeTrainer(BaseEstimator, RegressorMixin):
         Returns:
             Array of predicted log-prices.
         """
-        X_scaled = self.scaler_.transform(X)
+        X_imputed = self.imputer_.transform(X)
+        X_scaled = self.scaler_.transform(X_imputed)
         return self.model_.predict(X_scaled)
 
     def get_feature_weights(self, feature_names: pd.Index) -> pd.Series:
