@@ -1,0 +1,13 @@
+metric,value
+weighted_avg_mae,117624.0
+weighted_avg_mape,31.2
+best_year,1998
+best_year_mae,42057.0
+worst_year,2020
+worst_year_mae,259819.0
+mae_2024,177758.0
+r2_2024,0.2772
+mdape_2024,19.97
+n_test_years,28
+model,LightGBM
+train_strategy,Expanding OOT window
