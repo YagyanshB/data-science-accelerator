@@ -1,0 +1,6 @@
+property_type,code,mae,mape,n_samples
+Detached,D,244577.0,36.31,37
+Semi-Detached,S,164528.0,26.32,148
+Terraced,T,149120.0,25.83,251
+Flat/Maisonette,F,128583.0,28.21,451
+Other,O,1172662.0,194.72,29
