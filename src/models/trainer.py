@@ -17,6 +17,7 @@ from typing import Any, Dict, Optional, Tuple
 import numpy as np
 import pandas as pd
 from sklearn.base import BaseEstimator, RegressorMixin
+from sklearn.impute import SimpleImputer
 from sklearn.linear_model import Ridge
 from sklearn.preprocessing import StandardScaler
 
@@ -295,8 +296,21 @@ class RidgeTrainer(BaseEstimator, RegressorMixin):
         Returns:
             Fitted trainer (self).
         """
+        cols = X_train.columns
+        self.imputer_ = SimpleImputer(strategy="median")
+        X_train_clean = pd.DataFrame(
+            self.imputer_.fit_transform(X_train), columns=cols
+        )
+        assert X_train_clean.isnull().sum().sum() == 0, \
+            "SimpleImputer did not eliminate all NaNs from X_train"
+
+        logger.info(
+            "Ridge imputer filled NaNs in %d columns.",
+            X_train.isnull().any(axis=0).sum(),
+        )
+        self.feature_names_in_ = cols
         self.scaler_ = StandardScaler()
-        X_scaled = self.scaler_.fit_transform(X_train)
+        X_scaled = self.scaler_.fit_transform(X_train_clean)
         self.model_ = Ridge(alpha=self.alpha)
         self.model_.fit(X_scaled, y_train)
         logger.info("Ridge trained with alpha=%.4f.", self.alpha)
@@ -311,7 +325,10 @@ class RidgeTrainer(BaseEstimator, RegressorMixin):
         Returns:
             Array of predicted log-prices.
         """
-        X_scaled = self.scaler_.transform(X)
+        X_clean = pd.DataFrame(
+            self.imputer_.transform(X), columns=self.feature_names_in_
+        )
+        X_scaled = self.scaler_.transform(X_clean)
         return self.model_.predict(X_scaled)
 
     def get_feature_weights(self, feature_names: pd.Index) -> pd.Series:
